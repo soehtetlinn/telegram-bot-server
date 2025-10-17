@@ -1,0 +1,11 @@
+
+> start
+> node ./index.js
+
+Telegram bot listening on :4100
+[telegram-bot] setWebhook ok -> https://api.shltechent.com/api/telegram/webhook/89b661ae50a4a0800686644b579183bf6c43b3ac51033485b243b70b3e3fbe90
+[telegram-bot] incoming chatId=7850701183 text="/watch"
+[telegram-bot] incoming chatId=7850701183 text="/watch intro"
+[telegram-bot] incoming chatId=7850701183 text="/watch tutorial"
+[telegram-bot] incoming chatId=7850701183 text="/chay"
+[telegram-bot] incoming chatId=7850701183 text="/chat"
