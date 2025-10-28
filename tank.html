@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tank Retro Shooting</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0f16; color: #e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+  .wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 12px; }
+  canvas { background: radial-gradient(circle at 50% 35%, #0d1b2a 0%, #0a0f1a 70%); border: 1px solid #1f2937; border-radius: 8px; touch-action: none; box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 0 40px rgba(34,211,238,.08); }
+  .row { display: flex; gap: 8px; }
+  .joy { position: relative; width: 120px; height: 120px; border-radius: 50%; background: #0f172a; border:1px solid #1f2937; box-shadow: inset 0 0 20px rgba(34,211,238,.12); touch-action: none; }
+  .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin-left:-28px; margin-top:-28px; border-radius:50%; background:#22d3ee; box-shadow: 0 6px 20px rgba(34,211,238,.25); }
+  button { background:#22d3ee; color:#0b0f16; border:none; border-radius:10px; padding:10px 14px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>🎯 Tank Retro Shooting</h2>
+  <canvas id="game" width="320" height="240"></canvas>
+  <div class="row" style="gap:16px; align-items:center;">
+    <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    <button id="fire">🔥</button>
+  </div>
+  <div>Move with buttons; tap Fire to shoot. Avoid enemy shots.</div>
+</div>
+<script>
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const W = cvs.width, H = cvs.height;
+let t = 0;
+const player = { x: 40, y: H/2, vx: 0, vy: 0, speed: 2, bullets: [] };
+const enemies = [];
+const shots = [];
+const stars = Array.from({length:80}, ()=>({ x: Math.random()*W, y: Math.random()*H, s: Math.random()*1.2+.2 }));
+function spawnEnemy(){
+  enemies.push({ x: W-40, y: 20+Math.random()*(H-40), hp: 3, cd: 0 });
+}
+for(let i=0;i<3;i++) spawnEnemy();
+function step(){
+  t++;
+  // player move
+  player.x += player.vx; player.y += player.vy;
+  player.x = Math.max(8, Math.min(W-8, player.x));
+  player.y = Math.max(8, Math.min(H-8, player.y));
+  // player bullets
+  player.bullets.forEach(b=>{ b.x += 4; });
+  player.bullets = player.bullets.filter(b=>b.x < W);
+  // enemies
+  enemies.forEach(e=>{
+    if (t%60<30) e.y += 0.6; else e.y -= 0.6;
+    e.y = Math.max(8, Math.min(H-8, e.y));
+    if (e.cd>0) e.cd--; else if (Math.random()<0.01){
+      shots.push({ x: e.x-8, y: e.y, vx: -3, vy: 0 });
+      e.cd = 60;
+    }
+  });
+  // shots
+  shots.forEach(s=>{ s.x += s.vx; s.y += s.vy; });
+  shots.splice(0, shots.length, ...shots.filter(s=>s.x>0 && s.x<W && s.y>0 && s.y<H));
+  // collisions
+  for (const b of player.bullets){
+    for (const e of enemies){
+      if (Math.abs(b.x - e.x) < 8 && Math.abs(b.y - e.y) < 8){ e.hp--; b.x = W+999; }
+    }
+  }
+  enemies.splice(0, enemies.length, ...enemies.filter(e=>e.hp>0));
+  if (enemies.length < 3 && Math.random()<0.01) spawnEnemy();
+  // render
+  // starfield
+  ctx.fillStyle = '#0b1220'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(255,255,255,.15)';
+  stars.forEach(s=>{ s.x -= 0.3*s.s; if (s.x<0) s.x=W; ctx.fillRect(s.x, s.y, s.s, s.s); });
+  ctx.fillStyle = '#22d3ee'; ctx.fillRect(player.x-5, player.y-5, 10, 10);
+  ctx.fillStyle = '#ef4444'; enemies.forEach(e=>ctx.fillRect(e.x-6, e.y-6, 12, 12));
+  ctx.fillStyle = '#e5e7eb'; player.bullets.forEach(b=>{ ctx.save(); ctx.shadowColor='#22d3ee'; ctx.shadowBlur=10; ctx.fillRect(b.x-2, b.y-2, 4, 4); ctx.restore(); });
+  ctx.fillStyle = '#f59e0b'; shots.forEach(s=>{ ctx.save(); ctx.shadowColor='#f59e0b'; ctx.shadowBlur=8; ctx.fillRect(s.x-2, s.y-2, 4, 4); ctx.restore(); });
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+// controls
+const dirs = {left:[-1,0], right:[1,0], up:[0,-1], down:[0,1]};
+function setDir(dx,dy){ player.vx = dx*player.speed; player.vy = dy*player.speed; }
+// joystick
+const joy = document.getElementById('joy');
+const knob = document.getElementById('knob');
+const radius = 50; let dragging=false;
+function onStart(e){ dragging=true; onMove(e); }
+function onMove(e){ if (!dragging) return; const rect=joy.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2; const t=e.touches?e.touches[0]:e; let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy); if (d>radius){ dx*=radius/d; dy*=radius/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; setDir(Math.sign(dx), Math.sign(dy)); if (Math.abs(dx)<10 && Math.abs(dy)<10) setDir(0,0); }
+function onEnd(){ dragging=false; knob.style.transform='translate(0,0)'; setDir(0,0); }
+joy.addEventListener('touchstart', (e)=>{ e.preventDefault(); onStart(e); }, {passive:false});
+joy.addEventListener('touchmove', (e)=>{ e.preventDefault(); onMove(e); }, {passive:false});
+joy.addEventListener('touchend', (e)=>{ e.preventDefault(); onEnd(); }, {passive:false});
+joy.addEventListener('mousedown', onStart);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onEnd);
+function fire(){ player.bullets.push({ x: player.x+8, y: player.y }); }
+['fire'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', e=>{ e.preventDefault(); fire(); });
+  document.getElementById(id).addEventListener('touchstart', e=>{ e.preventDefault(); fire(); });
+});
+</script>
+</body>
+</html>

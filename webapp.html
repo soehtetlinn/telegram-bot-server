@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SHL Tech Ent Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #000000);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: var(--tg-theme-text-color);
+    }
+    
+    .header p {
+      color: var(--tg-theme-hint-color, #999);
+      font-size: 14px;
+    }
+    
+    .user-info {
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .user-info h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+    }
+    
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    
+    .info-label {
+      color: var(--tg-theme-hint-color, #999);
+      font-size: 14px;
+    }
+    
+    .info-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .features {
+      margin-top: 30px;
+    }
+    
+    .feature-card {
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-2px);
+    }
+    
+    .feature-card h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: var(--tg-theme-text-color);
+    }
+    
+    .feature-card p {
+      font-size: 14px;
+      color: var(--tg-theme-hint-color, #999);
+    }
+    
+    .button {
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    .button:active {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 SHL Tech Ent Bot</h1>
+      <p>Welcome to our Telegram Mini App</p>
+    </div>
+    
+    <div class="user-info">
+      <h2>👤 User Information</h2>
+      <div class="info-item">
+        <span class="info-label">Name:</span>
+        <span class="info-value" id="userName">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Username:</span>
+        <span class="info-value" id="userUsername">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">User ID:</span>
+        <span class="info-value" id="userId">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Language:</span>
+        <span class="info-value" id="userLang">Loading...</span>
+      </div>
+    </div>
+    
+    <div class="features">
+      <h2 style="margin-bottom: 15px;">✨ Features</h2>
+      
+      <div class="feature-card" onclick="openChat()">
+        <h3>💬 Chat with AI</h3>
+        <p>Get instant responses powered by AI</p>
+      </div>
+      
+      <div class="feature-card" onclick="watchVideos()">
+        <h3>🎥 Watch Videos</h3>
+        <p>Browse our video library</p>
+      </div>
+      
+      <div class="feature-card" onclick="getHelp()">
+        <h3>❓ Get Help</h3>
+        <p>View all available commands</p>
+      </div>
+      
+      <button class="button" onclick="sendData()">Send Data to Bot</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram Web App
+    let tg = window.Telegram.WebApp;
+    
+    // Expand the web app to full height
+    tg.expand();
+    
+    // Enable closing confirmation
+    tg.enableClosingConfirmation();
+    
+    // Display user information
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      document.getElementById('userName').textContent = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+      document.getElementById('userUsername').textContent = user.username || 'N/A';
+      document.getElementById('userId').textContent = user.id;
+      document.getElementById('userLang').textContent = user.language_code || 'en';
+    } else {
+      document.getElementById('userName').textContent = 'Guest';
+      document.getElementById('userUsername').textContent = 'N/A';
+      document.getElementById('userId').textContent = 'N/A';
+      document.getElementById('userLang').textContent = 'N/A';
+    }
+    
+    // Set main button
+    tg.MainButton.setText('Close App');
+    tg.MainButton.show();
+    tg.MainButton.onClick(function() {
+      tg.close();
+    });
+    
+    function openChat() {
+      tg.sendData(JSON.stringify({ action: 'chat', message: 'Hello from Mini App!' }));
+      tg.showAlert('Opening chat...', function() {
+        tg.close();
+      });
+    }
+    
+    function watchVideos() {
+      tg.sendData(JSON.stringify({ action: 'watch' }));
+      tg.showAlert('Opening video library...', function() {
+        tg.close();
+      });
+    }
+    
+    function getHelp() {
+      tg.sendData(JSON.stringify({ action: 'help' }));
+      tg.showAlert('Opening help...', function() {
+        tg.close();
+      });
+    }
+    
+    function sendData() {
+      const data = {
+        action: 'custom',
+        timestamp: Date.now(),
+        userId: user?.id,
+        message: 'Hello from Mini App!'
+      };
+      tg.sendData(JSON.stringify(data));
+    }
+    
+    // Show popup on load
+    tg.ready();
+    tg.showPopup({
+      title: 'Welcome!',
+      message: 'Welcome to SHL Tech Ent Mini App',
+      buttons: [{type: 'ok'}]
+    });
+  </script>
+</body>
+</html>
+

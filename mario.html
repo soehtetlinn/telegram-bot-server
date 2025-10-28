@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mario (Ad‑free)</title>
+<style>
+  html, body { margin:0; padding:0; background:#0b0f16; color:#e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; }
+  .wrap { display:flex; flex-direction:column; align-items:center; gap:8px; height:100vh; padding:10px; box-sizing:border-box; }
+  h2 { margin:6px 0 2px; color:#22d3ee }
+  canvas { background:linear-gradient(180deg,#0a1020 0%,#0a0f1a 70%); border:1px solid #1f2937; border-radius:10px; touch-action:none; box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 0 40px rgba(34,211,238,.08); }
+  .row { display:flex; gap:8px; }
+  .joy { position: relative; width: 120px; height: 120px; border-radius: 50%; background: #0f172a; border:1px solid #1f2937; box-shadow: inset 0 0 20px rgba(34,211,238,.12); touch-action: none; }
+  .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin-left:-28px; margin-top:-28px; border-radius:50%; background:#22d3ee; box-shadow: 0 6px 20px rgba(34,211,238,.25); }
+  button { background:#22d3ee; color:#0b0f16; border:none; border-radius:10px; padding:8px 14px; font-weight:800; }
+  .hint { font-size:12px; color:#94a3b8 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>🍄 Mario (Ad‑free)</h2>
+  <canvas id="game" width="352" height="198" aria-label="mario-like"></canvas>
+  <div class="row" style="gap:16px; align-items:center;">
+    <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    <button id="jump">Jump ⬆</button>
+    <button id="restart" style="display:none">Restart ↻</button>
+  </div>
+  <div class="hint">Tap Jump or press Space. Avoid pipes. Get the best score!</div>
+</div>
+<script>
+// Simple ad-free Mario-like runner (no Nintendo assets)
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const W=cvs.width, H=cvs.height;
+const GROUND_Y = H-28; // ground baseline
+let time=0, score=0, best=0, alive=true, speed=2.2, spawnCD=0;
+const player = { x: 40, y: GROUND_Y-18, vy: 0, w: 14, h: 18, onGround:true };
+const pipes = [];
+// Parallax layers
+const clouds = Array.from({length:6}, ()=>({ x: Math.random()*W, y: 10+Math.random()*60, s: .2+.6*Math.random(), w: 26+Math.random()*22 }));
+const hills = Array.from({length:5}, (_,i)=>({ x: i*(W/5)+Math.random()*20, y: GROUND_Y-8, w: 80, h: 18+Math.random()*10, s: .5+.4*Math.random() }));
+
+function reset(){
+  time=0; score=0; speed=2.2; spawnCD=0; alive=true; player.x=40; player.y=GROUND_Y-18; player.vy=0; player.onGround=true; pipes.length=0; hideRestart();
+}
+
+function jump(){
+  if(!alive){ reset(); return; }
+  if (player.onGround){ player.vy = -4.8; player.onGround=false; }
+}
+
+function spawnPipe(){
+  const gapH = 52; // gap height
+  const topH = 20 + Math.random()*(H-80);
+  const bottomY = topH + gapH;
+  pipes.push({ x: W+20, top: topH, bottomY, w: 22 });
+}
+
+function step(){
+  time++;
+  // Parallax drift
+  clouds.forEach(c=>{ c.x -= c.s; if (c.x < -c.w) c.x = W + c.w; });
+  hills.forEach(h=>{ h.x -= h.s; if (h.x < -h.w) h.x = W + h.w; });
+  // Physics
+  player.vy += 0.18; // gravity
+  player.y += player.vy;
+  if (player.y+player.h >= GROUND_Y){ player.y = GROUND_Y-player.h; player.vy=0; player.onGround=true; }
+  // Pipes
+  if (spawnCD<=0){ spawnPipe(); spawnCD = 120/Math.min(3.5, speed); } else spawnCD--;
+  pipes.forEach(p=>p.x -= speed);
+  while (pipes.length && pipes[0].x + pipes[0].w < -10) { pipes.shift(); score++; speed = Math.min(3.5, speed+0.02); }
+
+  // Collisions
+  for (const p of pipes){
+    // top pipe: from y=0 to p.top ; bottom pipe: from p.bottomY to ground
+    const collX = player.x < p.x+p.w && player.x+player.w > p.x;
+    const hitTop = player.y < p.top;
+    const hitBottom = player.y+player.h > p.bottomY;
+    if (collX && (hitTop || hitBottom)) { alive=false; best=Math.max(best,score); showRestart(); }
+  }
+
+  // Render
+  ctx.fillStyle = '#07101e'; ctx.fillRect(0,0,W,H);
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  clouds.forEach(c=>{ ctx.beginPath(); ctx.ellipse(c.x, c.y, c.w, 10, 0, 0, Math.PI*2); ctx.fill(); });
+  // hills
+  ctx.fillStyle = '#0f1b31';
+  hills.forEach(h=>{ ctx.beginPath(); ctx.moveTo(h.x-h.w/2, GROUND_Y); ctx.quadraticCurveTo(h.x, h.y-h.h, h.x+h.w/2, GROUND_Y); ctx.closePath(); ctx.fill(); });
+  // ground
+  ctx.fillStyle = '#0d1726'; ctx.fillRect(0,GROUND_Y, W, H-GROUND_Y);
+  // player (red cap, blue body)
+  ctx.fillStyle = '#ef4444'; ctx.fillRect(player.x, player.y, player.w, 6); // cap
+  ctx.fillStyle = '#60a5fa'; ctx.fillRect(player.x, player.y+6, player.w, player.h-6); // body
+  // pipes
+  ctx.fillStyle = '#10b981';
+  pipes.forEach(p=>{ ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, p.bottomY, p.w, GROUND_Y-p.bottomY); });
+  // HUD
+  ctx.fillStyle = '#e5e7eb'; ctx.font = 'bold 12px system-ui';
+  ctx.fillText(`Score: ${score}  Best: ${best}`, 8, 14);
+  if (!alive){ ctx.fillStyle='#fca5a5'; ctx.fillText('Game Over - tap Restart', W/2-60, 30); }
+
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+
+// Inputs
+document.getElementById('jump').addEventListener('click', jump);
+document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); jump(); } });
+function showRestart(){ document.getElementById('restart').style.display='inline-block'; }
+function hideRestart(){ document.getElementById('restart').style.display='none'; }
+document.getElementById('restart').addEventListener('click', reset);
+// touch to jump
+cvs.addEventListener('touchstart', e=>{ e.preventDefault(); jump(); }, {passive:false});
+// joystick for horizontal move
+const joy = document.getElementById('joy');
+const knob = document.getElementById('knob');
+const radius = 50; let dragging=false;
+function onStart(e){ dragging=true; onMove(e); }
+function onMove(e){ if (!dragging) return; const rect=joy.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2; const t=e.touches?e.touches[0]:e; let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy); if (d>radius){ dx*=radius/d; dy*=radius/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; if (Math.abs(dx)>12){ player.vx = Math.sign(dx)*player.speed; } else { player.vx = 0; } }
+function onEnd(){ dragging=false; knob.style.transform='translate(0,0)'; player.vx=0; }
+joy.addEventListener('touchstart', (e)=>{ e.preventDefault(); onStart(e); }, {passive:false});
+joy.addEventListener('touchmove', (e)=>{ e.preventDefault(); onMove(e); }, {passive:false});
+joy.addEventListener('touchend', (e)=>{ e.preventDefault(); onEnd(); }, {passive:false});
+joy.addEventListener('mousedown', onStart);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onEnd);
+</script>
+</body>
+</html>

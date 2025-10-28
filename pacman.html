@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pacman (Local)</title>
+<style>
+  html, body { margin:0; padding:0; background:#0b0f16; color:#e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; }
+  .wrap { height: 100vh; display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px; box-sizing:border-box; }
+  h2 { margin:6px 0 2px; color:#fbbf24 }
+  canvas { background:#000814; border:1px solid #1f2937; border-radius:10px; touch-action:none; }
+  /* joystick */
+  .joy { position: relative; width: 120px; height: 120px; border-radius: 50%; background: #0f172a; border:1px solid #1f2937; box-shadow: inset 0 0 20px rgba(34,211,238,.12); touch-action: none; }
+  .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin-left:-28px; margin-top:-28px; border-radius:50%; background:#22d3ee; box-shadow: 0 6px 20px rgba(34,211,238,.25); }
+  .row { display:flex; gap:8px; }
+  button { background:#22d3ee; color:#0b0f16; border:none; border-radius:10px; padding:8px 14px; font-weight:800; }
+  .muted { font-size:12px; color:#94a3b8 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>🟡 Pacman (Ad‑free Local)</h2>
+  <canvas id="game" width="380" height="420" aria-label="pacman"></canvas>
+  <div class="row" style="gap:16px; align-items:center;">
+    <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    <div class="muted">Drag joystick to move</div>
+  </div>
+  <div class="muted">Arrow keys or on‑screen buttons. Eat pellets, avoid ghosts. Power pellets frighten ghosts!</div>
+</div>
+<script>
+// Local Pacman clone (no external assets)
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const TILE = 20;
+const COLS = Math.floor(cvs.width / TILE);
+const ROWS = Math.floor(cvs.height / TILE);
+
+// 0 empty, 1 wall, 2 pellet, 3 power pellet
+const LAYOUT = [
+  '111111111111111111',
+  '1........11......1',
+  '1.1111...11..11..1',
+  '1.1..1.......11..1',
+  '1.1..1.1111..11..1',
+  '1....1.1..1..11..1',
+  '1111.1.1..1..11..1',
+  '1..... . .. .. ...1',
+  '1.1111.1111.1111.1',
+  '1......1  1......1',
+  '1.1111.1  1.1111.1',
+  '1.... . .... ... .1',
+  '1.11..111311..11.1',
+  '1.11.....33....1.1',
+  '1.111111..111111.1',
+  '1................1',
+  '111111111111111111'
+].map(r=>r.replace(/ /g,'.'));
+
+const grid = Array.from({length:ROWS}, (_,y)=>Array.from({length:COLS}, (_,x)=>{
+  const c=(LAYOUT[y]||'')[x]||'1';
+  return c==='1'?1:(c==='.'?2:(c==='3'?3:0));
+}));
+
+let pellets = 0;
+for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) if (grid[y][x]===2||grid[y][x]===3) pellets++;
+
+const DIRS = { left:[-1,0], right:[1,0], up:[0,-1], down:[0,1] };
+const ORDER = ['left','up','right','down'];
+
+const pac = { x:1.5, y:1.5, dir:'right', next:'right', speed:0.085, mouth:0 };
+const ghosts = [
+  { x: COLS-2.5, y: 1.5, color:'#ef4444', mode:'chase', fright:0, speed:0.075 },
+  { x: COLS-2.5, y: ROWS-2.5, color:'#a78bfa', mode:'chase', fright:0, speed:0.07 },
+  { x: 1.5, y: ROWS-2.5, color:'#10b981', mode:'chase', fright:0, speed:0.07 },
+  { x: COLS/2, y: ROWS/2, color:'#f59e0b', mode:'chase', fright:0, speed:0.072 }
+];
+
+let score=0, best=0, win=false;
+
+function canMove(nx,ny){
+  const gx=Math.round(nx), gy=Math.round(ny);
+  return grid[gy] && grid[gy][gx]!==1;
+}
+
+function atCenter(n){ return Math.abs(n - Math.round(n)) < 0.02; }
+
+function stepPac(){
+  // turn if can at tile center
+  if (atCenter(pac.x) && atCenter(pac.y)){
+    const [dxN,dyN]=DIRS[pac.next];
+    if (canMove(pac.x+dxN, pac.y+dyN)) pac.dir=pac.next;
+  }
+  const [dx,dy]=DIRS[pac.dir];
+  const nx = pac.x + dx*pac.speed;
+  const ny = pac.y + dy*pac.speed;
+  if (canMove(nx,ny)) { pac.x=nx; pac.y=ny; }
+  // eat
+  const gx=Math.round(pac.x), gy=Math.round(pac.y);
+  if (grid[gy] && (grid[gy][gx]===2 || grid[gy][gx]===3)){
+    if (grid[gy][gx]===3){ ghosts.forEach(g=>g.fright=600); } // ~10s frightened
+    grid[gy][gx]=0; pellets--; score+= (grid[gy][gx]===3?10:1);
+    if (pellets<=0) { win=true; best=Math.max(best,score); }
+  }
+  // mouth animation
+  pac.mouth = (pac.mouth + 0.18)%Math.PI;
+}
+
+function stepGhost(g){
+  // frightened blue blink
+  if (g.fright>0) g.fright--;
+  // choose direction at tile centers
+  if (atCenter(g.x) && atCenter(g.y)){
+    const options = [];
+    for (const d of ORDER){
+      const [dx,dy]=DIRS[d];
+      const nx=g.x+dx, ny=g.y+dy;
+      if (!canMove(nx,ny)) continue;
+      options.push({ d, nx, ny, dist: Math.hypot(pac.x-nx,pac.y-ny) });
+    }
+    if (options.length){
+      options.sort((a,b)=> (g.fright>0 ? b.dist-a.dist : a.dist-b.dist));
+      const pick = options[0];
+      g.dir = pick.d;
+    }
+  }
+  const [dx,dy]=DIRS[g.dir||'left']||[0,0];
+  const nx=g.x+dx*g.speed, ny=g.y+dy*g.speed;
+  if (canMove(nx,ny)) { g.x=nx; g.y=ny; }
+}
+
+function reset(){ score=0; win=false; pac.x=1.5; pac.y=1.5; pac.dir='right'; pac.next='right'; ghosts.forEach((g,i)=>{ g.fright=0; }); }
+
+function draw(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  // walls & pellets
+  for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+    const v=grid[y][x]; const px=x*TILE, py=y*TILE;
+    if (v===1){ ctx.fillStyle='#0ea5e9'; ctx.fillRect(px,py,TILE,TILE); }
+    else if (v===2){ ctx.fillStyle='#fde047'; ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2, 3, 0, Math.PI*2); ctx.fill(); }
+    else if (v===3){ ctx.fillStyle='#f472b6'; ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2, 6, 0, Math.PI*2); ctx.fill(); }
+  }
+  // pacman mouth direction
+  const ang = 0.7+0.7*Math.sin(pac.mouth);
+  const dirAng = {right:0, up:-Math.PI/2, left:Math.PI, down:Math.PI/2}[pac.dir];
+  ctx.fillStyle='#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(pac.x*TILE, pac.y*TILE);
+  ctx.arc(pac.x*TILE, pac.y*TILE, TILE*0.45, dirAng+ang/2, dirAng-ang/2, true);
+  ctx.closePath(); ctx.fill();
+  // ghosts
+  for (const g of ghosts){
+    const px=g.x*TILE, py=g.y*TILE; ctx.fillStyle = g.fright>0 ? (g.fright%40<20?'#60a5fa':'#3b82f6') : g.color;
+    ctx.beginPath(); ctx.arc(px, py, TILE*0.42, Math.PI, 0); ctx.lineTo(px+TILE*0.42, py+TILE*0.42); ctx.lineTo(px-TILE*0.42, py+TILE*0.42); ctx.closePath(); ctx.fill();
+  }
+  // HUD
+  ctx.fillStyle='#e5e7eb'; ctx.font='bold 12px system-ui'; ctx.fillText(`Score: ${score}  Best: ${best}`, 8, 14);
+  if (win){ ctx.fillStyle='#22d3ee'; ctx.fillText('You win! 🎉', cvs.width/2-30, cvs.height/2); }
+}
+
+function loop(){ stepPac(); ghosts.forEach(stepGhost); // collisions
+  for (const g of ghosts){
+    if (Math.hypot(g.x-pac.x, g.y-pac.y) < 0.6){
+      if (g.fright>0){ score+=50; g.x=COLS/2; g.y=ROWS/2; g.fright=0; }
+      else { best=Math.max(best,score); reset(); }
+    }
+  }
+  draw(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// keyboard
+document.addEventListener('keydown', e=>{
+  if (e.key==='ArrowLeft') pac.next='left';
+  else if (e.key==='ArrowRight') pac.next='right';
+  else if (e.key==='ArrowUp') pac.next='up';
+  else if (e.key==='ArrowDown') pac.next='down';
+});
+// joystick
+const joy = document.getElementById('joy');
+const knob = document.getElementById('knob');
+const radius = 50; // movement radius
+let dragging=false;
+function setDirFrom(dx,dy){
+  // choose major axis
+  if (Math.abs(dx) > Math.abs(dy)) pac.next = dx>0 ? 'right' : 'left';
+  else pac.next = dy>0 ? 'down' : 'up';
+}
+function onStart(e){ dragging=true; onMove(e); }
+function onMove(e){ if (!dragging) return; const rect=joy.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2; const t=e.touches?e.touches[0]:e; let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy); if (d>radius){ dx*=radius/d; dy*=radius/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; if (d>8) setDirFrom(dx,dy); }
+function onEnd(){ dragging=false; knob.style.transform='translate(0,0)'; }
+joy.addEventListener('touchstart', (e)=>{ e.preventDefault(); onStart(e); }, {passive:false});
+joy.addEventListener('touchmove', (e)=>{ e.preventDefault(); onMove(e); }, {passive:false});
+joy.addEventListener('touchend', (e)=>{ e.preventDefault(); onEnd(); }, {passive:false});
+joy.addEventListener('mousedown', onStart);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onEnd);
+</script>
+</body>
+</html>
+

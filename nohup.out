@@ -4,8 +4,83 @@
 
 Telegram bot listening on :4100
 [telegram-bot] setWebhook ok -> https://api.shltechent.com/api/telegram/webhook/89b661ae50a4a0800686644b579183bf6c43b3ac51033485b243b70b3e3fbe90
-[telegram-bot] incoming chatId=7850701183 text="/watch"
-[telegram-bot] incoming chatId=7850701183 text="/watch intro"
-[telegram-bot] incoming chatId=7850701183 text="/watch tutorial"
-[telegram-bot] incoming chatId=7850701183 text="/chay"
+[telegram-bot] incoming chatId=7850701183 text="Hi"
+[telegram-bot] webhook error TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async sendTelegramMessage (file:///root/shltechent/telegram-bot-server/index.js:208:16)
+    at async file:///root/shltechent/telegram-bot-server/index.js:374:9 {
+  [cause]: AggregateError [ETIMEDOUT]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at internalConnectMultiple (node:net:1190:5)
+      at Timeout.internalConnectMultipleTimeout (node:net:1716:5)
+      at listOnTimeout (node:internal/timers:583:11)
+      at process.processTimers (node:internal/timers:519:7) {
+    code: 'ETIMEDOUT',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[telegram-bot] incoming chatId=7850701183 text="Hi"
+[telegram-bot] webhook error TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async sendTelegramMessage (file:///root/shltechent/telegram-bot-server/index.js:208:16)
+    at async file:///root/shltechent/telegram-bot-server/index.js:374:9 {
+  [cause]: AggregateError [ETIMEDOUT]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at internalConnectMultiple (node:net:1190:5)
+      at Timeout.internalConnectMultipleTimeout (node:net:1716:5)
+      at listOnTimeout (node:internal/timers:583:11)
+      at process.processTimers (node:internal/timers:519:7) {
+    code: 'ETIMEDOUT',
+    [errors]: [ [Error], [Error] ]
+  }
+}
 [telegram-bot] incoming chatId=7850701183 text="/chat"
+[telegram-bot] incoming chatId=123 text="/help"
+[telegram-bot] webhook error TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async sendTelegramMessage (file:///root/shltechent/telegram-bot-server/index.js:208:16)
+    at async file:///root/shltechent/telegram-bot-server/index.js:284:9 {
+  [cause]: AggregateError [ETIMEDOUT]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at internalConnectMultiple (node:net:1190:5)
+      at Timeout.internalConnectMultipleTimeout (node:net:1716:5)
+      at listOnTimeout (node:internal/timers:583:11)
+      at process.processTimers (node:internal/timers:519:7) {
+    code: 'ETIMEDOUT',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[telegram-bot] incoming chatId=7850701183 text="Hi"
+[telegram-bot] incoming chatId=7850701183 text="/start"
+[telegram-bot] webhook error TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async sendTelegramMessage (file:///root/shltechent/telegram-bot-server/index.js:208:16)
+    at async file:///root/shltechent/telegram-bot-server/index.js:368:9 {
+  [cause]: AggregateError [ETIMEDOUT]: 
+      at internalConnectMultiple (node:net:1122:18)
+      at internalConnectMultiple (node:net:1190:5)
+      at Timeout.internalConnectMultipleTimeout (node:net:1716:5)
+      at listOnTimeout (node:internal/timers:583:11)
+      at process.processTimers (node:internal/timers:519:7) {
+    code: 'ETIMEDOUT',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[telegram-bot] incoming chatId=7850701183 text="/watch"
+[telegram-bot] incoming chatId=7850701183 text="/help"
+[telegram-bot] incoming chatId=7850701183 text="/play_games"
+[telegram-bot] incoming chatId=7850701183 text="Hi"
+[telegram-bot] incoming chatId=7850701183 text="Hi"
+[telegram-bot] incoming chatId=7850701183 text="Kjgvnalbs"
+[telegram-bot] incoming chatId=7850701183 text="No it has pattern find it"
+[telegram-bot] incoming chatId=7850701183 text="Find it"
+[telegram-bot] incoming chatId=7850701183 text="Pattern"
+[telegram-bot] incoming chatId=7850701183 text="Maths"
+[telegram-bot] incoming chatId=7850701183 text="Mythics"
+[telegram-bot] incoming chatId=7850701183 text="God level"
+[telegram-bot] incoming chatId=7850701183 text="Worship"
+[telegram-bot] incoming chatId=7850701183 text="Jshdbdlsldbdbs"

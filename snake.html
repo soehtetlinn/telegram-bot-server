@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Snake Game - SHL Tech Ent</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #1a1a1a);
+      color: var(--tg-theme-text-color, #ffffff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+    }
+    
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    .header {
+      text-align: center;
+      width: 100%;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+      color: var(--tg-theme-text-color);
+    }
+    
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      padding: 15px;
+      background: var(--tg-theme-secondary-bg-color, #2a2a2a);
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .score-item {
+      text-align: center;
+    }
+    
+    .score-label {
+      font-size: 12px;
+      color: var(--tg-theme-hint-color, #999);
+      margin-bottom: 5px;
+    }
+    
+    .score-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--tg-theme-button-color, #4CAF50);
+    }
+    
+    #gameCanvas {
+      border: 3px solid var(--tg-theme-button-color, #4CAF50);
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+      touch-action: none;
+    }
+    
+    /* Joystick */
+    .joy-wrap {
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      margin-top: 14px;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+    .joy { position: relative; width: 90px; height: 90px; border-radius: 50%; background: var(--tg-theme-secondary-bg-color, #2a2a2a); border:1px solid #1f2937; box-shadow: inset 0 0 16px rgba(34,211,238,.12); touch-action: none; margin-right: 14px; }
+    .knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin-left:-20px; margin-top:-20px; border-radius:50%; background: var(--tg-theme-button-color, #4CAF50); box-shadow: 0 6px 20px rgba(34,211,238,.18); }
+    
+    .game-over {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .game-over.show {
+      display: flex;
+    }
+    
+    .game-over-content {
+      background: var(--tg-theme-secondary-bg-color, #2a2a2a);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 90%;
+    }
+    
+    .game-over-content h2 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: var(--tg-theme-button-color, #4CAF50);
+    }
+    
+    .game-over-content p {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+    
+    .restart-btn {
+      background: var(--tg-theme-button-color, #4CAF50);
+      color: var(--tg-theme-button-text-color, #fff);
+      border: none;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .restart-btn:active {
+      opacity: 0.8;
+    }
+    
+    .share-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--tg-theme-button-color, #4CAF50);
+      color: var(--tg-theme-button-text-color, #fff);
+      border: none;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .share-btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <button class="share-btn" id="shareBtn" title="Share this game">🔗</button>
+  
+  <div class="game-container">
+    <div class="header">
+      <h1>🐍 Snake Game</h1>
+    </div>
+    
+    <div class="score-board">
+      <div class="score-item">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="score">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">High Score</div>
+        <div class="score-value" id="highScore">0</div>
+      </div>
+    </div>
+    
+    <canvas id="gameCanvas" width="300" height="300"></canvas>
+    
+    <div class="joy-wrap">
+      <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    </div>
+  </div>
+  
+  <div class="game-over" id="gameOver">
+    <div class="game-over-content">
+      <h2>Game Over!</h2>
+      <p>Your Score: <strong id="finalScore">0</strong></p>
+      <p>High Score: <strong id="finalHighScore">0</strong></p>
+      <button class="restart-btn" onclick="restartGame()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram Web App
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.enableClosingConfirmation();
+    
+    // Game variables
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 15;
+    const tileSize = canvas.width / gridSize;
+    
+    let snake = [{x: 7, y: 7}];
+    let direction = {x: 1, y: 0};
+    let nextDirection = {x: 1, y: 0}; // Buffer for next direction
+    let food = {x: 10, y: 10};
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem('snakeHighScore') || '0');
+    let gameLoop;
+    let gameSpeed = 260; // slower start
+    let baseSpeed = 260;
+    let minSpeed = 80; // Fastest speed
+    
+    // Update high score display
+    document.getElementById('highScore').textContent = highScore;
+    
+    // Draw functions
+    function drawSnake() {
+      const wave = Math.sin(Date.now()/120);
+      snake.forEach((segment, index) => {
+        const isHead = index === 0;
+        // Body color with slight wave animation
+        const g = isHead ? 80 : 72 + Math.floor(8 * Math.sin((index+wave)*0.8));
+        ctx.fillStyle = `hsl(140 ${g}% 45%)`;
+        // Rounded capsules for a smoother look
+        const x = segment.x * tileSize, y = segment.y * tileSize, r = 6;
+        ctx.beginPath();
+        ctx.moveTo(x+r, y);
+        ctx.lineTo(x+tileSize-r-2, y);
+        ctx.quadraticCurveTo(x+tileSize-2, y, x+tileSize-2, y+r);
+        ctx.lineTo(x+tileSize-2, y+tileSize-r-2);
+        ctx.quadraticCurveTo(x+tileSize-2, y+tileSize-2, x+tileSize-r-2, y+tileSize-2);
+        ctx.lineTo(x+r, y+tileSize-2);
+        ctx.quadraticCurveTo(x-2, y+tileSize-2, x-2, y+tileSize-r-2);
+        ctx.lineTo(x-2, y+r);
+        ctx.quadraticCurveTo(x-2, y, x+r, y);
+        ctx.fill();
+        
+        if (isHead) {
+          // tongue flick animation
+          if (wave > 0.6) {
+            ctx.fillStyle = '#ff6b6b';
+            const tx = x + (direction.x>0 ? tileSize-2 : direction.x<0 ? 0 : tileSize/2);
+            const ty = y + (direction.y>0 ? tileSize-2 : direction.y<0 ? 0 : tileSize/2);
+            ctx.fillRect(tx - 2, ty - 2, 4, 4);
+          }
+          // eyes
+          ctx.fillStyle = '#fff';
+          const eye = 3;
+          if (direction.x === 1) { ctx.fillRect(x+tileSize-8, y+5, eye, eye); ctx.fillRect(x+tileSize-8, y+tileSize-8, eye, eye); }
+          else if (direction.x === -1) { ctx.fillRect(x+3, y+5, eye, eye); ctx.fillRect(x+3, y+tileSize-8, eye, eye); }
+          else if (direction.y === -1) { ctx.fillRect(x+5, y+3, eye, eye); ctx.fillRect(x+tileSize-8, y+3, eye, eye); }
+          else { ctx.fillRect(x+5, y+tileSize-6, eye, eye); ctx.fillRect(x+tileSize-8, y+tileSize-6, eye, eye); }
+        }
+      });
+    }
+    
+    function drawFood() {
+      ctx.fillStyle = '#FF5252';
+      ctx.beginPath();
+      ctx.arc(
+        food.x * tileSize + tileSize / 2,
+        food.y * tileSize + tileSize / 2,
+        tileSize / 2 - 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+    
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid
+      ctx.strokeStyle = '#111';
+      for (let i = 0; i <= gridSize; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * tileSize, 0);
+        ctx.lineTo(i * tileSize, canvas.height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * tileSize);
+        ctx.lineTo(canvas.width, i * tileSize);
+        ctx.stroke();
+      }
+      
+      drawFood();
+      drawSnake();
+    }
+    
+    function update() {
+      // Use buffered direction to prevent quick double-tap bugs
+      direction = {...nextDirection};
+      
+      const head = {
+        x: snake[0].x + direction.x,
+        y: snake[0].y + direction.y
+      };
+      
+      // Check wall collision
+      if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize) {
+        gameOver();
+        return;
+      }
+      
+      // Check self collision
+      if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        gameOver();
+        return;
+      }
+      
+      snake.unshift(head);
+      
+      // Check food collision
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        document.getElementById('score').textContent = score;
+        
+        // Progressive speed increase - gets faster with each food
+        gameSpeed = Math.max(minSpeed, baseSpeed - (score * 8));
+        clearInterval(gameLoop);
+        gameLoop = setInterval(gameStep, gameSpeed);
+        
+        // Generate new food
+        generateFood();
+        
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+          tg.HapticFeedback.impactOccurred('medium');
+        }
+      } else {
+        snake.pop();
+      }
+    }
+    
+    function generateFood() {
+      do {
+        food = {
+          x: Math.floor(Math.random() * gridSize),
+          y: Math.floor(Math.random() * gridSize)
+        };
+      } while (snake.some(segment => segment.x === food.x && segment.y === food.y));
+    }
+    
+    function gameStep() {
+      update();
+      draw();
+    }
+    
+    function gameOver() {
+      clearInterval(gameLoop);
+      
+      // Update high score
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('snakeHighScore', highScore);
+        tg.showPopup({
+          title: '🎉 New High Score!',
+          message: `Congratulations! You scored ${score} points!`,
+          buttons: [{type: 'ok'}]
+        });
+      }
+      
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('finalHighScore').textContent = highScore;
+      document.getElementById('gameOver').classList.add('show');
+      
+      // Haptic feedback
+      if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('error');
+      }
+    }
+    
+    function restartGame() {
+      snake = [{x: 7, y: 7}];
+      direction = {x: 1, y: 0};
+      nextDirection = {x: 1, y: 0};
+      score = 0;
+      gameSpeed = baseSpeed; // Reset to slow speed
+      document.getElementById('score').textContent = score;
+      document.getElementById('highScore').textContent = highScore;
+      document.getElementById('gameOver').classList.remove('show');
+      generateFood();
+      clearInterval(gameLoop);
+      gameLoop = setInterval(gameStep, gameSpeed);
+    }
+    
+    // Virtual joystick for mobile
+    const joy = document.getElementById('joy');
+    const knob = document.getElementById('knob');
+    const radius = 36; // small
+    let dragging=false;
+    function setDir(dx,dy){
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx>0 && direction.x===0) nextDirection={x:1,y:0};
+        else if (dx<0 && direction.x===0) nextDirection={x:-1,y:0};
+      } else {
+        if (dy>0 && direction.y===0) nextDirection={x:0,y:1};
+        else if (dy<0 && direction.y===0) nextDirection={x:0,y:-1};
+      }
+    }
+    function onStart(e){ dragging=true; onMove(e); }
+    function onMove(e){ if (!dragging) return; const rect=joy.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2; const t=e.touches?e.touches[0]:e; let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy); if (d>radius){ dx*=radius/d; dy*=radius/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; if (d>8) setDir(dx,dy); }
+    function onEnd(){ dragging=false; knob.style.transform='translate(0,0)'; }
+    joy.addEventListener('touchstart', (e)=>{ e.preventDefault(); onStart(e); }, {passive:false});
+    joy.addEventListener('touchmove', (e)=>{ e.preventDefault(); onMove(e); }, {passive:false});
+    joy.addEventListener('touchend', (e)=>{ e.preventDefault(); onEnd(); }, {passive:false});
+    joy.addEventListener('mousedown', onStart);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      switch(e.key) {
+        case 'ArrowUp':
+          if (direction.y === 0) nextDirection = {x: 0, y: -1};
+          break;
+        case 'ArrowDown':
+          if (direction.y === 0) nextDirection = {x: 0, y: 1};
+          break;
+        case 'ArrowLeft':
+          if (direction.x === 0) nextDirection = {x: -1, y: 0};
+          break;
+        case 'ArrowRight':
+          if (direction.x === 0) nextDirection = {x: 1, y: 0};
+          break;
+      }
+    });
+    
+    // Swipe controls for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    canvas.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    });
+    
+    canvas.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (deltaX > 30 && direction.x === 0) {
+          nextDirection = {x: 1, y: 0};
+        } else if (deltaX < -30 && direction.x === 0) {
+          nextDirection = {x: -1, y: 0};
+        }
+      } else {
+        // Vertical swipe
+        if (deltaY > 30 && direction.y === 0) {
+          nextDirection = {x: 0, y: 1};
+        } else if (deltaY < -30 && direction.y === 0) {
+          nextDirection = {x: 0, y: -1};
+        }
+      }
+    });
+    
+    // Start game
+    tg.ready();
+    generateFood();
+    draw();
+    gameLoop = setInterval(gameStep, gameSpeed);
+    
+    // Hide main button (not needed)
+    tg.MainButton.hide();
+    
+    // Share button functionality
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+      const shareUrl = 'https://api.shltechent.com/snake';
+      const shareText = '🐍 Challenge yourself with Snake Game! Can you handle the speed? 🎮';
+      
+      // Check if Telegram WebApp share is available
+      if (tg.showPopup) {
+        // Inside Telegram - use Telegram share
+        const botUsername = 'SHL Tech Ent.'; // Replace with your actual bot username
+        const shareLink = `https://t.me/${botUsername}?start=snake`;
+        
+        tg.showPopup({
+          title: 'Share Snake Game',
+          message: 'Share this game with your friends!',
+          buttons: [
+            {id: 'share', type: 'default', text: 'Share in Telegram'},
+            {type: 'cancel'}
+          ]
+        }, (buttonId) => {
+          if (buttonId === 'share') {
+            // Open share dialog
+            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(shareText)}`);
+          }
+        });
+      } else if (navigator.share) {
+        // Outside Telegram - use Web Share API
+        try {
+          await navigator.share({
+            title: 'Snake Game',
+            text: shareText,
+            url: shareUrl
+          });
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyToClipboard(shareUrl);
+          }
+        }
+      } else {
+        // Fallback - copy to clipboard
+        copyToClipboard(shareUrl);
+      }
+    });
+    
+    function copyToClipboard(text) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (tg.showAlert) {
+            tg.showAlert('Link copied to clipboard! Share it with your friends.');
+          } else {
+            alert('Link copied to clipboard!');
+          }
+        });
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          if (tg.showAlert) {
+            tg.showAlert('Link copied to clipboard! Share it with your friends.');
+          } else {
+            alert('Link copied to clipboard!');
+          }
+        } catch (err) {
+          console.error('Copy failed:', err);
+        }
+        document.body.removeChild(textArea);
+      }
+    }
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SHL Miner</title>
+<style>
+  html, body { margin:0; padding:0; background:#0b0f16; color:#e5e7eb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; }
+  .wrap { max-width:520px; margin:0 auto; padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:#0a0f1a; border:1px solid #1f2937; border-radius:14px; padding:14px; }
+  .row { display:flex; justify-content:space-between; align-items:center; }
+  .bar { height:12px; border-radius:8px; background:#111827; overflow:hidden; }
+  .fill { height:100%; background: linear-gradient(90deg, #22d3ee, #67e8f9); width:50%; transition: width .25s ease, filter .25s ease; filter: drop-shadow(0 0 8px rgba(34,211,238,.35)); }
+  button { background:#22d3ee; color:#0b0f16; border:none; border-radius:12px; padding:12px 16px; font-weight:800; box-shadow:0 6px 20px rgba(34,211,238,.25); transition: transform .12s ease, box-shadow .2s ease; }
+  button:active { transform: translateY(1px) scale(.99); box-shadow:0 2px 12px rgba(34,211,238,.2); }
+  .muted { color:#94a3b8; font-size:12px; }
+  .cols { display:flex; gap:10px; }
+  .col { flex:1; }
+  /* animated shimmer for energy when recharging */
+  @keyframes shimmer { from { background-position: 0 0; } to { background-position: 120px 0; } }
+  .shimmer { background-image: linear-gradient(90deg, rgba(34,211,238,.0) 0%, rgba(103,232,249,.25) 50%, rgba(34,211,238,.0) 100%); background-size: 120px 12px; animation: shimmer 1.2s infinite linear; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="row"><div style="font-weight:800; letter-spacing:.5px;">SHL Miner</div><div id="bal" style="font-weight:800;">0</div></div>
+    <div class="muted">Coins</div>
+  </div>
+  <div class="card">
+    <div class="row"><div>Energy</div><div id="enText">50 / 50</div></div>
+    <div class="bar"><div id="enFill" class="fill" style="width:100%"></div></div>
+    <div class="row" style="margin-top:10px;"><button id="tap">Tap to earn</button><div class="muted">+1 coin / tap</div></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:8px;">Upgrades</div>
+    <div class="cols">
+      <div class="col">
+        <div class="muted">Max Energy</div>
+        <div id="maxEn">50 → 60</div>
+        <button id="buyMax">Buy (100)</button>
+      </div>
+      <div class="col">
+        <div class="muted">Recharge Rate</div>
+        <div id="rr">1/min</div>
+        <button id="buyRR">Buy (150)</button>
+      </div>
+    </div>
+  </div>
+  <div class="muted">Daily reward and referrals can be added next.</div>
+  <div class="muted">Note: Local-only MVP (no server auth yet).</div>
+</div>
+<script>
+const storageKey = 'miner_v1';
+function load(){ try { return JSON.parse(localStorage.getItem(storageKey)||''); } catch { return null; } }
+function save(){ localStorage.setItem(storageKey, JSON.stringify(state)); }
+const now=()=>Date.now();
+let state = load() || { bal:0, maxEn:50, energy:50, rr:1, lastTick: now() };
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function tick(){
+  const t = now();
+  const mins = (t - state.lastTick)/60000;
+  if (mins > 0){
+    const before = state.energy;
+    state.energy = clamp(state.energy + mins*state.rr, 0, state.maxEn);
+    state.lastTick = t; save();
+    const fill = document.getElementById('enFill');
+    if (state.energy > before) fill.classList.add('shimmer'); else fill.classList.remove('shimmer');
+  }
+  render();
+  requestAnimationFrame(tick);
+}
+function render(){
+  document.getElementById('bal').textContent = Math.floor(state.bal).toString();
+  document.getElementById('enText').textContent = `${Math.floor(state.energy)} / ${state.maxEn}`;
+  document.getElementById('enFill').style.width = `${(state.energy/state.maxEn)*100|0}%`;
+  document.getElementById('maxEn').textContent = `${state.maxEn} → ${state.maxEn+10}`;
+  document.getElementById('rr').textContent = `${state.rr}/min`;
+}
+function tap(){
+  if (state.energy < 1) return;
+  state.energy -= 1; state.bal += 1; save(); render();
+}
+function buyMax(){
+  if (state.bal < 100) return; state.bal -= 100; state.maxEn += 10; state.energy = state.maxEn; save(); render();
+}
+function buyRR(){
+  if (state.bal < 150) return; state.bal -= 150; state.rr += 0.5; save(); render();
+}
+// inputs
+['tap','buyMax','buyRR'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', (e)=>{ e.preventDefault(); ({tap, buyMax, buyRR})[id](); });
+});
+// touch spam friendly
+let tapping=false; document.getElementById('tap').addEventListener('touchstart', e=>{ e.preventDefault(); tapping=true; });
+window.addEventListener('touchend', ()=> tapping=false);
+setInterval(()=>{ if (tapping) tap(); }, 90);
+render(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>
+
